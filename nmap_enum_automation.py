@@ -3,8 +3,8 @@ import json
 import xmltodict
 
 ACTIONS = {
-    80: "gobuster dir -u http://{target} -w /usr/share/wordists/dirb/common.txt",
-    443: "gobuster dir -u https://{target} -w /usr/share/wordists/dirb/common.txt",
+    80: "gobuster dir -u http://{target} -w /usr/share/wordlists/dirb/common.txt",
+    443: "gobuster dir -u https://{target} -w /usr/share/wordlists/dirb/common.txt",
     21: "ftp {target}",
     22: "hydra -L users.txt -P pasaswords.txt ssh://{target}",
 
@@ -18,7 +18,7 @@ def run_nmap_scan(target, args):
 def convert_xml_to_json():
     with open("nmap_result.xml", "r") as xml_file:
         xml_content = xml_file.read()
-        json_data = json.dumps(xmltodict.parse(xml_content), indent=4)
+        json_data = xmltodict.parse(xml_content)
         return json_data
     
 def extract_port_details(port):
@@ -74,6 +74,27 @@ def parse_nmap_output():
     return open_ports
 
 def execute_automations(target, open_ports):
+    can_automate_ports = []
     for port in open_ports:
         if port.get("port_number") in ACTIONS:
-            
+            can_automate_ports.append(port)
+    for port in can_automate_ports:
+        action = ACTIONS[port.get("port_number")]
+        start_automation = input(f"Should I start enumeration for port {port.get('port_number')}? (y/n)")
+        if start_automation.lower()  == "y":
+            print(f"Running {action} for port {port.get('port_number')}")
+            subprocess.run(action.format(target=target), shell=True)
+        else:
+            print(f"Skipping port {port.get('port_number')}")
+            continue
+
+if __name__ == "__main__":
+    target = input("Enter the Target IP: ")
+    args = input("Enter nmamp scan arguments: ")
+    run_nmap_scan(target, args)
+    open_ports = parse_nmap_output()
+    if open_ports:
+        execute_automations(target, open_ports)
+    else:
+        print("No open ports found")
+    
